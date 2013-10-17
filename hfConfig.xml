@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Path to trees -->
+  <treepath>./trees/treetable</treepath>
+  <!-- Number of trees -->
+  <ntree>40</ntree>
+
+  <!-- Patch width -->
+  <pwidth>20</pwidth>
+  <!-- Patch height -->
+  <pheight>20</pheight>
+
+  <!-- extract patch ratio -->
+  <patchratio>1000</patchratio>
+  <!-- Stride -->
+  <stride>5</stride>
+  <!-- Train image per tree -->
+  <trainimagepertree>50</trainimagepertree>
+  <!-- min sample number -->
+  <minsample>5</minsample>
+  <!-- max depth of tree -->
+  <maxdepth>15</maxdepth>
+  <!-- ratio of pos patch number and neg patch number -->
+  <posnegpatchratio>2.0</posnegpatchratio>
+  <activepatchratio>1.0</activepatchratio>
+  <numberOfTrials>100</numberOfTrials>
+
+  <!--learning mode 1:depth 2:rgb 0:rgbd-->
+  <learningmode>0</learningmode>
+  <!-- haar-like : 0, HOG : 1, rotated haar-like : 2-->
+  <rgbfeature>2</rgbfeature>
+  <depthfeature>2</depthfeature>
+
+  <trainposdata>
+    <!-- Path to root of training data  -->
+    <rootpath>./dataset</rootpath>
+    <!-- Training data folder list name -->
+    <folderlist>trainData.txt</folderlist>
+    <!-- Training data image list-->
+    <imagelist>dataListInst2.0.txt</imagelist>
+  </trainposdata>
+
+  <trainnegdata>
+    <rootpath>./negdata</rootpath>
+    <folderlist>negDataFolderList.txt</folderlist>
+    <imagelist>negDataList.txt</imagelist>
+  </trainnegdata>
+
+  <testdata>
+    <rootpath>./testdata</rootpath>
+    <folderlist>testData.txt</folderlist>
+    <imagelist>testDataListInst2.0.txt</imagelist>
+  </testdata>
+
+  <!-- Offset of tree-->
+  <offtree>0</offtree>
+  <classdatabasename>classDatabase</classdatabasename>
+
+  <!--<mindistance>350</mindistance>-->
+  <mindistance>350</mindistance>
+  <maxdistance>1000</maxdistance>
+
+  <modellistfolder>models</modellistfolder>
+  <modellistname>models.txt</modellistname>
+</root>
