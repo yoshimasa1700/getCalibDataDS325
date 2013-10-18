@@ -26,6 +26,7 @@
 #include <vector>
 #include <exception>
 #include <string>
+#include <ctime>
 
 #include <DepthSense.hxx>
 
@@ -52,13 +53,15 @@ int imageNum = 0;
 
 cv::Mat g_depth,g_color;
 
+string dataFolderName("calibData");
+
 #define MAX_DEPTH 1000
 #define MIN_DEPTH 0
 
 /*----------------------------------------------------------------------------*/
 // New color sample event handler
 void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
-  printf("C#%u: %d\n",g_cFrames,data.colorMap.size());
+  printf("colorflame %u: %d\n",g_cFrames,data.colorMap.size());
 
   memcpy(g_color.data, data.colorMap, data.colorMap.size());
 
@@ -90,8 +93,8 @@ void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
     if(key == 't'){
 
     stringstream ss_c, ss_d;
-    ss_c << "color_" << imageNum << ".png";
-    ss_d << "depth_" << imageNum << ".png";
+    ss_c << dataFolderName << "/" << "color_" << imageNum << ".png";
+    ss_d << dataFolderName << "/" << "depth_" << imageNum << ".png";
 
     cv::imwrite(ss_c.str(), g_color);
     cv::imwrite(ss_d.str(), g_depth);
@@ -109,13 +112,9 @@ void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
 // New depth sample event handler
 void onNewDepthSample(DepthNode node, DepthNode::NewSampleReceivedData data)
 {
-  printf("Z#%u: %d\n",g_dFrames,data.vertices.size());
+  printf("depthflame %u: %d\n",g_dFrames,data.vertices.size());
   g_dFrames++;
-  printf("Z2#: %d\n", g_depth.cols * g_depth.rows * g_depth.channels());
   memcpy(g_depth.data, data.confidenceMap, data.confidenceMap.size()*2);
-
-  //  std::cout << g_depth << std::endl;
-  std::cout << g_depth.type() << std::endl;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -240,13 +239,6 @@ void configureNode(Node node)
 
   cv::namedWindow("color");
   cv::namedWindow("depth");
-
-  // if ((node.is<AudioNode>())&&(!g_anode.isSet()))
-  // {
-  //     g_anode = node.as<AudioNode>();
-  //     configureAudioNode();
-  //     g_context.registerNode(node);
-  // }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -303,6 +295,11 @@ int main(int argc, char* argv[])
   g_color = cv::Mat(480, 640, CV_8UC3);
   g_depth = cv::Mat(240, 320, CV_16UC1);
 
+  //create tree directory
+  string execstr = "mkdir -p ";
+  execstr += dataFolderName;
+  system( execstr.c_str() );
+
   // We are only interested in the first device
   if (da.size() >= 1)
     {
@@ -329,7 +326,6 @@ int main(int argc, char* argv[])
 
   if (g_cnode.isSet()) g_context.unregisterNode(g_cnode);
   if (g_dnode.isSet()) g_context.unregisterNode(g_dnode);
-  //if (g_anode.isSet()) g_context.unregisterNode(g_anode);
 
   printf("close nodes");
 
