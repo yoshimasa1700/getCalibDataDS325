@@ -9,3 +9,4 @@ Makefile
 install_manifest.txt
 getCalibDataDS325
 calibData/
+*~

@@ -34,6 +34,6 @@ LINK_DIRECTORIES("/usr/local/lib")
 LINK_DIRECTORIES("/usr/lib")
 LINK_DIRECTORIES("/opt/softkinetic/DepthSenseSDK/lib")
 
-ADD_EXECUTABLE(getCalibDataDS325 main.cpp)
-TARGET_LINK_LIBRARIES(getCalibDataDS325 DepthSense DepthSensePlugins turbojpeg ${OpenCV_LIBRARIES})
+ADD_EXECUTABLE(getCalibDataDS325 ./src/main.cpp)
+TARGET_LINK_LIBRARIES(getCalibDataDS325 DepthSense DepthSensePlugins turbojpeg ${OpenCV_LIBRARIES} gflags)
 

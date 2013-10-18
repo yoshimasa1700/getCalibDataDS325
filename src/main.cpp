@@ -26,13 +26,17 @@
 #include <vector>
 #include <exception>
 #include <string>
+#include <ctime>
 
 #include <DepthSense.hxx>
 
 #include <opencv2/opencv.hpp>
 
+#include <gflags/gflags.h>
+
 using namespace DepthSense;
 using namespace std;
+using namespace google;
 
 Context g_context;
 DepthNode g_dnode;
@@ -55,15 +59,18 @@ cv::Mat g_depth,g_color;
 #define MAX_DEPTH 1000
 #define MIN_DEPTH 0
 
+// definition for gflags
+DEFINE_string(folder, "calibData", "calibration data folder name");
+DEFINE_string(depth, "depth_", "depth file name");
+DEFINE_string(color, "color_", "color file name");
+DEFINE_string(type, ".png", "file type");
+
 /*----------------------------------------------------------------------------*/
 // New color sample event handler
 void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
-  printf("C#%u: %d\n",g_cFrames,data.colorMap.size());
-
+  printf("colorflame %u: %d\n",g_cFrames,data.colorMap.size());
+  int key = 0;
   memcpy(g_color.data, data.colorMap, data.colorMap.size());
-
-  cv::imshow("color", g_color);
-  int key = cv::waitKey(1);
 
   cv::Mat scaledDepth(g_depth.rows * 2, g_depth.cols * 2, CV_16UC1);
 
@@ -78,7 +85,7 @@ void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
   scaledDepth -= minDist;
   scaledDepth.convertTo(scaledDepth, CV_8UC1, 255.0 / (MAX_DEPTH - MIN_DEPTH));
 
-  cv::imshow("depth", scaledDepth);
+
 
   if( cv::findChessboardCorners(g_color, patternSize, imagePoints[0],
 				CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE) && 
@@ -86,19 +93,31 @@ void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
 				CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE)) {
 
     std::cout << "found" << std::endl;
-
+    key = cv::waitKey(1);
     if(key == 't'){
 
-    stringstream ss_c, ss_d;
-    ss_c << "color_" << imageNum << ".png";
-    ss_d << "depth_" << imageNum << ".png";
+      stringstream ss_c, ss_d;
+      ss_c << FLAGS_folder << "/" << FLAGS_color << imageNum << FLAGS_type;
+      ss_d << FLAGS_folder << "/" << FLAGS_depth << imageNum << FLAGS_type;
 
-    cv::imwrite(ss_c.str(), g_color);
-    cv::imwrite(ss_d.str(), g_depth);
+      cv::imwrite(ss_c.str(), g_color);
+      cv::imwrite(ss_d.str(), g_depth);
 
-    imageNum++;
-  }
-  }
+      imageNum++;
+      
+      cout << "image " << imageNum << " saved" << endl;
+
+    }
+
+    cv::rectangle(g_color, cv::Point(5,5), cv::Point(635, 475), cv::Scalar(255,0,0), 3);      
+  }else
+    cv::rectangle(g_color, cv::Point(5,5), cv::Point(635, 475), cv::Scalar(0,0,255), 3);      
+  
+
+  cv::imshow("color", g_color);
+  cv::imshow("depth", scaledDepth);
+
+  key = cv::waitKey(1);
   if(key == 'q'){
     g_context.quit();    
   }
@@ -109,13 +128,9 @@ void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
 // New depth sample event handler
 void onNewDepthSample(DepthNode node, DepthNode::NewSampleReceivedData data)
 {
-  printf("Z#%u: %d\n",g_dFrames,data.vertices.size());
+  printf("depthflame %u: %d\n",g_dFrames,data.vertices.size());
   g_dFrames++;
-  printf("Z2#: %d\n", g_depth.cols * g_depth.rows * g_depth.channels());
   memcpy(g_depth.data, data.confidenceMap, data.confidenceMap.size()*2);
-
-  //  std::cout << g_depth << std::endl;
-  std::cout << g_depth.type() << std::endl;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -240,13 +255,6 @@ void configureNode(Node node)
 
   cv::namedWindow("color");
   cv::namedWindow("depth");
-
-  // if ((node.is<AudioNode>())&&(!g_anode.isSet()))
-  // {
-  //     g_anode = node.as<AudioNode>();
-  //     configureAudioNode();
-  //     g_context.registerNode(node);
-  // }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -290,6 +298,13 @@ void onDeviceDisconnected(Context context, Context::DeviceRemovedData data)
 /*----------------------------------------------------------------------------*/
 int main(int argc, char* argv[])
 {
+  string usage("This Program get calibration data. \n Would you kindly hit 't' key if rectangle turns blue.");
+  SetUsageMessage(usage);
+  SetVersionString("1.0");
+
+  ParseCommandLineFlags(&argc, &argv, true);
+
+
   g_context = Context::create("localhost");
 
   g_context.deviceAddedEvent().connect(&onDeviceConnected);
@@ -302,6 +317,11 @@ int main(int argc, char* argv[])
   //g_color = cv::Mat(720, 1280, CV_8UC3);
   g_color = cv::Mat(480, 640, CV_8UC3);
   g_depth = cv::Mat(240, 320, CV_16UC1);
+
+  //create tree directory
+  string execstr = "mkdir -p ";
+  execstr += FLAGS_folder;
+  system( execstr.c_str() );
 
   // We are only interested in the first device
   if (da.size() >= 1)
@@ -329,15 +349,11 @@ int main(int argc, char* argv[])
 
   if (g_cnode.isSet()) g_context.unregisterNode(g_cnode);
   if (g_dnode.isSet()) g_context.unregisterNode(g_dnode);
-  //if (g_anode.isSet()) g_context.unregisterNode(g_anode);
 
   printf("close nodes");
 
   if (g_pProjHelper)
     delete g_pProjHelper;
-
-  if (g_forest)
-    delete g_forest;
 
   return 0;
 }
