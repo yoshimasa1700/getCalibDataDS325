@@ -65,7 +65,7 @@ void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
 
   memcpy(g_color.data, data.colorMap, data.colorMap.size());
 
-  cv::imshow("color", g_color);
+
   int key = cv::waitKey(1);
 
   cv::Mat scaledDepth(g_depth.rows * 2, g_depth.cols * 2, CV_16UC1);
@@ -81,7 +81,7 @@ void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
   scaledDepth -= minDist;
   scaledDepth.convertTo(scaledDepth, CV_8UC1, 255.0 / (MAX_DEPTH - MIN_DEPTH));
 
-  cv::imshow("depth", scaledDepth);
+
 
   if( cv::findChessboardCorners(g_color, patternSize, imagePoints[0],
 				CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE) && 
@@ -92,16 +92,28 @@ void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
 
     if(key == 't'){
 
-    stringstream ss_c, ss_d;
-    ss_c << dataFolderName << "/" << "color_" << imageNum << ".png";
-    ss_d << dataFolderName << "/" << "depth_" << imageNum << ".png";
+      stringstream ss_c, ss_d;
+      ss_c << dataFolderName << "/" << "color_" << imageNum << ".png";
+      ss_d << dataFolderName << "/" << "depth_" << imageNum << ".png";
 
-    cv::imwrite(ss_c.str(), g_color);
-    cv::imwrite(ss_d.str(), g_depth);
+      cv::imwrite(ss_c.str(), g_color);
+      cv::imwrite(ss_d.str(), g_depth);
 
-    imageNum++;
-  }
-  }
+      imageNum++;
+
+
+    }
+
+    cv::rectangle(g_color, cv::Point(5,5), cv::Point(635, 475), cv::Scalar(255,0,0), 3);      
+  }else
+    cv::rectangle(g_color, cv::Point(5,5), cv::Point(635, 475), cv::Scalar(0,0,255), 3);      
+  
+
+  cv::imshow("color", g_color);
+  cv::imshow("depth", scaledDepth);
+
+  key = cv::waitKey(1);
+
   if(key == 'q'){
     g_context.quit();    
   }
