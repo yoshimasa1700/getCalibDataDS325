@@ -31,10 +31,6 @@
 
 #include <opencv2/opencv.hpp>
 
-#include <HFMD_core/CRForest.h>
-#include <HFMD_core/util.h>
-#include <HFMD_core/CDataset.h>
-
 using namespace DepthSense;
 using namespace std;
 
@@ -56,58 +52,54 @@ int imageNum = 0;
 
 cv::Mat g_depth,g_color;
 
-CRForest *g_forest;
-
-/*----------------------------------------------------------------------------*/
-// New audio sample event handler
-// void onNewAudioSample(AudioNode node, AudioNode::NewSampleReceivedData data)
-// {
-//     printf("A#%u: %d\n",g_aFrames,data.audioData.size());
-//     g_aFrames++;
-// }
+#define MAX_DEPTH 1000
+#define MIN_DEPTH 0
 
 /*----------------------------------------------------------------------------*/
 // New color sample event handler
 void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
   printf("C#%u: %d\n",g_cFrames,data.colorMap.size());
-  //*data.colorMap;
-  //data.colorMap
-
-  // printf("C2#: %d\n", g_color.cols * g_color.rows * g_color.channels());
-  // printf("C3: %d\n", sizeof(*g_color.data));
 
   memcpy(g_color.data, data.colorMap, data.colorMap.size());
 
   cv::imshow("color", g_color);
-  
   int key = cv::waitKey(1);
-
-  CTestDataset seqImg;
 
   cv::Mat scaledDepth(g_depth.rows * 2, g_depth.cols * 2, CV_16UC1);
 
-  cv::resize(g_depth, scaledDepth, scaledDepth.size());
+  cv::Mat maxDist = cv::Mat::ones(g_color.rows , g_color.cols , CV_16UC1) * MAX_DEPTH;
+  cv::Mat minDist = cv::Mat::ones(g_color.rows , g_color.cols , CV_16UC1) * MIN_DEPTH;
+  cv::resize(g_depth, scaledDepth, cv::Size(), 2.0,2.0);
+  cv::min(scaledDepth, maxDist, scaledDepth);
+
+  cv::Size patternSize = cv::Size(9, 6);
+  std::vector<cv::Point2f> imagePoints[2];
+
+  scaledDepth -= minDist;
+  scaledDepth.convertTo(scaledDepth, CV_8UC1, 255.0 / (MAX_DEPTH - MIN_DEPTH));
 
   cv::imshow("depth", scaledDepth);
 
-  seqImg.img.push_back(&g_color);
-  seqImg.img.push_back(&scaledDepth);
+  if( cv::findChessboardCorners(g_color, patternSize, imagePoints[0],
+				CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE) && 
+      cv::findChessboardCorners(scaledDepth, patternSize, imagePoints[1],
+				CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE)) {
 
-  CDetectionResult detectR;
+    std::cout << "found" << std::endl;
 
-  detectR = g_forest->detection(seqImg);
-
-  if(key == 't'){
+    if(key == 't'){
 
     stringstream ss_c, ss_d;
-    ss_c << "color_" << imageNum << ".png" << endl;
-    ss_d << "depth_" << imageNum << ".png" << endl;
+    ss_c << "color_" << imageNum << ".png";
+    ss_d << "depth_" << imageNum << ".png";
 
     cv::imwrite(ss_c.str(), g_color);
     cv::imwrite(ss_d.str(), g_depth);
 
     imageNum++;
-  }else if(key == 'q'){
+  }
+  }
+  if(key == 'q'){
     g_context.quit();    
   }
   g_cFrames++;
@@ -118,90 +110,13 @@ void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
 void onNewDepthSample(DepthNode node, DepthNode::NewSampleReceivedData data)
 {
   printf("Z#%u: %d\n",g_dFrames,data.vertices.size());
-
-  // // Project some 3D points in the Color Frame
-  // if (!g_pProjHelper)
-  // {
-  //     g_pProjHelper = new ProjectionHelper (data.stereoCameraParameters);
-  //     g_scp = data.stereoCameraParameters;
-  // }
-  // else if (g_scp != data.stereoCameraParameters)
-  // {
-  //     g_pProjHelper->setStereoCameraParameters(data.stereoCameraParameters);
-  //     g_scp = data.stereoCameraParameters;
-  // }
-
-  // int32_t w, h;
-  // FrameFormat_toResolution(data.captureConfiguration.frameFormat,&w,&h);
-  // int cx = w/2;
-  // int cy = h/2;
-
-  // printf("%d, %d\n", w, h);
-  // printf("%d", data.depthMap.size());
-
-  // Vertex p3DPoints[4];
-
-  // p3DPoints[0] = data.vertices[(cy-h/4)*w+cx-w/4];
-  // p3DPoints[1] = data.vertices[(cy-h/4)*w+cx+w/4];
-  // p3DPoints[2] = data.vertices[(cy+h/4)*w+cx+w/4];
-  // p3DPoints[3] = data.vertices[(cy+h/4)*w+cx-w/4];
-    
-  // Point2D p2DPoints[4];
-  // g_pProjHelper->get2DCoordinates ( p3DPoints, p2DPoints, 4, CAMERA_PLANE_COLOR);
-  // for(int i = 0; i < 4; ++i){
-  //   printf("p2DPoints[%d] = %d , %d\n", i , p2DPoints[i].x, p2DPoints[i].y);
-  // }
   g_dFrames++;
-
   printf("Z2#: %d\n", g_depth.cols * g_depth.rows * g_depth.channels());
-  //printf("C3: %d\n", sizeof(*g_color.data));
+  memcpy(g_depth.data, data.confidenceMap, data.confidenceMap.size()*2);
 
-  memcpy(g_depth.data, data.depthMap, data.depthMap.size()*2);
-  //cv::imshow("depth", g_depth);
-  //cv::waitKey(1);
-
-  // Quit the main loop after 200 depth frames received
-  //if (g_dFrames == 200)
-  //    g_context.quit();
+  //  std::cout << g_depth << std::endl;
+  std::cout << g_depth.type() << std::endl;
 }
-
-/*----------------------------------------------------------------------------*/
-// void configureAudioNode()
-// {
-//     g_anode.newSampleReceivedEvent().connect(&onNewAudioSample);
-
-//     AudioNode::Configuration config = g_anode.getConfiguration();
-//     config.sampleRate = 44100;
-
-//     try 
-//     {
-//         g_context.requestControl(g_anode,0);
-
-//         g_anode.setConfiguration(config);
-        
-//         g_anode.setInputMixerLevel(0.5f);
-//     }
-//     catch (ArgumentException& e)
-//     {
-//         printf("Argument Exception: %s\n",e.what());
-//     }
-//     catch (UnauthorizedAccessException& e)
-//     {
-//         printf("Unauthorized Access Exception: %s\n",e.what());
-//     }
-//     catch (ConfigurationException& e)
-//     {
-//         printf("Configuration Exception: %s\n",e.what());
-//     }
-//     catch (StreamingException& e)
-//     {
-//         printf("Streaming Exception: %s\n",e.what());
-//     }
-//     catch (TimeoutException&)
-//     {
-//         printf("TimeoutException\n");
-//     }
-// }
 
 /*----------------------------------------------------------------------------*/
 void configureDepthNode()
@@ -215,7 +130,8 @@ void configureDepthNode()
   config.saturation = true;
 
   g_dnode.setEnableVertices(true);
-  g_dnode.setEnableDepthMap(true);
+  //g_dnode.setEnableDepthMap(true);
+  g_dnode.setEnableConfidenceMap(true);
 
   try 
     {
@@ -374,39 +290,6 @@ void onDeviceDisconnected(Context context, Context::DeviceRemovedData data)
 /*----------------------------------------------------------------------------*/
 int main(int argc, char* argv[])
 {
-  CConfig		conf;	 // setting
-  std::vector<CDataset> dataSet; // training data name list and grand truth
-
-  //read argument
-  //check argument
-  if(argc < 2) {
-    cout << "Usage: ./learning [config.xml]"<< endl;
-    conf.loadConfig("hfConfig.xml");
-  } else
-    conf.loadConfig(argv[1]);
-
-  if(argc < 3)
-    conf.off_tree = 0;
-  else
-    conf.off_tree = atoi(argv[2]);
-
-  conf.demoMode = 1;
-  // create random forest class
-  //CRForest forest(conf);
-  g_forest = NULL;
-  g_forest = new CRForest(conf);
-
-  g_forest->loadForest();
-
-  //create tree direct
-  //string opath(conf.outpath);
-  //std::cout << "kokomade kitayo" << std::endl;
-  //std::cout << conf.outpath << std::endl;
-  //opath.erase(opath.find_last_of(PATH_SEP));
-  //string execstr = "mkdir ";
-  //execstr += opath;
-  //system( execstr.c_str() );
-
   g_context = Context::create("localhost");
 
   g_context.deviceAddedEvent().connect(&onDeviceConnected);
@@ -452,9 +335,6 @@ int main(int argc, char* argv[])
 
   if (g_pProjHelper)
     delete g_pProjHelper;
-
-  if (g_forest)
-    delete g_forest;
 
   return 0;
 }

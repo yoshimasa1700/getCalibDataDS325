@@ -31,10 +31,6 @@
 
 #include <opencv2/opencv.hpp>
 
-#include <HFMD_core/CRForest.h>
-#include <HFMD_core/util.h>
-#include <HFMD_core/CDataset.h>
-
 using namespace DepthSense;
 using namespace std;
 
@@ -56,66 +52,33 @@ int imageNum = 0;
 
 cv::Mat g_depth,g_color;
 
-CRForest *g_forest;
-
 #define MAX_DEPTH 1000
 #define MIN_DEPTH 0
-
-/*----------------------------------------------------------------------------*/
-// New audio sample event handler
-// void onNewAudioSample(AudioNode node, AudioNode::NewSampleReceivedData data)
-// {
-//     printf("A#%u: %d\n",g_aFrames,data.audioData.size());
-//     g_aFrames++;
-// }
 
 /*----------------------------------------------------------------------------*/
 // New color sample event handler
 void onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data){
   printf("C#%u: %d\n",g_cFrames,data.colorMap.size());
-  //*data.colorMap;
-  //data.colorMap
-
-  // printf("C2#: %d\n", g_color.cols * g_color.rows * g_color.channels());
-  // printf("C3: %d\n", sizeof(*g_color.data));
 
   memcpy(g_color.data, data.colorMap, data.colorMap.size());
 
   cv::imshow("color", g_color);
-  
   int key = cv::waitKey(1);
-
-  CTestDataset seqImg;
 
   cv::Mat scaledDepth(g_depth.rows * 2, g_depth.cols * 2, CV_16UC1);
 
   cv::Mat maxDist = cv::Mat::ones(g_color.rows , g_color.cols , CV_16UC1) * MAX_DEPTH;
   cv::Mat minDist = cv::Mat::ones(g_color.rows , g_color.cols , CV_16UC1) * MIN_DEPTH;
-
   cv::resize(g_depth, scaledDepth, cv::Size(), 2.0,2.0);
-
-  std::cout << scaledDepth.size() << std::endl;
-  std::cout << minDist.size() << std::endl;
-
   cv::min(scaledDepth, maxDist, scaledDepth);
 
   cv::Size patternSize = cv::Size(9, 6);
   std::vector<cv::Point2f> imagePoints[2];
 
   scaledDepth -= minDist;
-  std::cout << "koko" << std::endl;
   scaledDepth.convertTo(scaledDepth, CV_8UC1, 255.0 / (MAX_DEPTH - MIN_DEPTH));
 
-  //cv::Mat dispMat(g_depth.rows *2, g_depth.cols *2, CV_8UC1);
-  
   cv::imshow("depth", scaledDepth);
-
-  seqImg.img.push_back(&g_color);
-  seqImg.img.push_back(&scaledDepth);
-
-  CDetectionResult detectR;
-
-  //  detectR = g_forest->detection(seqImg);
 
   if( cv::findChessboardCorners(g_color, patternSize, imagePoints[0],
 				CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE) && 
@@ -327,39 +290,6 @@ void onDeviceDisconnected(Context context, Context::DeviceRemovedData data)
 /*----------------------------------------------------------------------------*/
 int main(int argc, char* argv[])
 {
-  CConfig		conf;	 // setting
-  std::vector<CDataset> dataSet; // training data name list and grand truth
-
-  //read argument
-  //check argument
-  if(argc < 2) {
-    cout << "Usage: ./learning [config.xml]"<< endl;
-    conf.loadConfig("hfConfig.xml");
-  } else
-    conf.loadConfig(argv[1]);
-
-  if(argc < 3)
-    conf.off_tree = 0;
-  else
-    conf.off_tree = atoi(argv[2]);
-
-  conf.demoMode = 1;
-  // create random forest class
-  //CRForest forest(conf);
-  g_forest = NULL;
-  g_forest = new CRForest(conf);
-
-  g_forest->loadForest();
-
-  //create tree direct
-  //string opath(conf.outpath);
-  //std::cout << "kokomade kitayo" << std::endl;
-  //std::cout << conf.outpath << std::endl;
-  //opath.erase(opath.find_last_of(PATH_SEP));
-  //string execstr = "mkdir ";
-  //execstr += opath;
-  //system( execstr.c_str() );
-
   g_context = Context::create("localhost");
 
   g_context.deviceAddedEvent().connect(&onDeviceConnected);
